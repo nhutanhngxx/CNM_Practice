@@ -2,7 +2,7 @@ const courses = [
     {
         id: 1,
         name: 'Cơ sở dữ liệu',
-        course_type: 'Cơ sở',
+        courseType: 'Cơ sở',
         semester: 'HK1-2020-2021',
         department: 'KHOA CNTT'
     },

@@ -1,0 +1,92 @@
+const awsHelper = require('./aws.helper');
+
+class Subject {
+    constructor(id, subjectName, courseType, semester, department) {
+        this.id = id;  // id của subject, sẽ được chuyển thành chuỗi khi lưu vào DynamoDB
+        this.subjectName = subjectName;
+        this.courseType = courseType;
+        this.semester = semester;
+        this.department = department;
+    }
+
+    // Phương thức tạo mới subject trong DynamoDB
+    create() {
+        return new Promise((resolve, reject) => {
+            const subjectData = {
+                id: this.id.toString(),  // Chuyển id thành chuỗi nếu nó là số (Do DynamoDB đang lưu là String)
+                subjectName: this.subjectName,
+                courseType: this.courseType,
+                semester: this.semester,
+                department: this.department
+            };
+
+            awsHelper.createItem(subjectData)
+                .then(() => resolve('Subject created successfully'))
+                .catch((error) => reject('Error creating subject: ' + error));
+        });
+    }
+
+    // Phương thức tìm subject theo id
+    getById(id) {
+        return new Promise((resolve, reject) => {
+            const key = { id: id.toString() };  // Đảm bảo id là chuỗi (Do DynamoDB đang lưu là String)
+            awsHelper.getItem(key)
+                .then((subjectData) => {
+                    if (subjectData) {
+                        resolve(new Subject(subjectData.id, subjectData.subjectName, subjectData.courseType, subjectData.semester, subjectData.department));
+                    } else {
+                        resolve(null);  // Trả về null nếu không tìm thấy subject
+                    }
+                })
+                .catch((error) => reject('Error retrieving subject: ' + error));
+        });
+    }
+
+    // Phương thức cập nhật subject
+    update(updateData) {
+        return new Promise((resolve, reject) => {
+            const key = { id: this.id.toString() };  // Chuyển id thành chuỗi (Do DynamoDB đang lưu là String)
+            const updateExpression = 'set #subjectName = :subjectName, #courseType = :courseType, #semester = :semester, #department = :department';
+            const expressionValues = {
+                ':subjectName': updateData.subjectName || this.subjectName,  // Nếu không có giá trị mới thì giữ nguyên
+                ':courseType': updateData.courseType || this.courseType,
+                ':semester': updateData.semester || this.semester,
+                ':department': updateData.department || this.department,
+            };
+
+            awsHelper.updateItem(key, updateExpression, expressionValues)
+                .then(() => resolve('Subject updated successfully'))
+                .catch((error) => reject('Error updating subject: ' + error));
+        });
+    }
+
+    // Phương thức xóa subject
+    delete() {
+        return new Promise((resolve, reject) => {
+            const key = { id: this.id.toString() };  // Chuyển id thành chuỗi
+            awsHelper.deleteItem(key)
+                .then(() => resolve('Subject deleted successfully'))
+                .catch((error) => reject('Error deleting subject: ' + error));
+        });
+    }
+
+    // Phương thức lấy tất cả subjects từ DynamoDB
+    static getAll() {
+        return new Promise((resolve, reject) => {
+            awsHelper.scanTable()
+                .then((subjectsData) => {
+                    const subjects = subjectsData.map(subjectData => new Subject(
+                        subjectData.id,
+                        subjectData.subjectName,
+                        subjectData.courseType,
+                        subjectData.semester,
+                        subjectData.department
+                    ));
+                    resolve(subjects);
+                })
+                .catch((error) => reject('Error scanning subjects: ' + error));
+        });
+    }
+}
+
+module.exports = Subject;

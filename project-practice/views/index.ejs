@@ -8,8 +8,8 @@
 </head>
 <body class="container mt-4 d-flex flex-column align-items-center">
     <!-- Form thêm dữ liệu -->
-    <h1 class="text-center font-weight-bold mb-3">ADD NEW DATA</h1>
-    <form class="w-50" action="/save" method="post">
+    <h1 class="text-center font-weight-bold mb-3">ADD NEW COURSES</h1>
+    <form class="w-50" action="/save" method="post" enctype="multipart/form-data">
         <div class="d-flex justify-content-between">
             <input type="text" class="border mb-4 rounded-lg p-2" name="id" placeholder="Enter ID.." required/>
             <input type="text" class="border mb-4 rounded-lg p-2" name="subjectName" placeholder="Enter name.. " required/>
@@ -19,6 +19,7 @@
             <input type="text" class="border mb-4 rounded-lg p-2" name="semester" placeholder="Enter Semester.." required/>
         </div>
         <input type="text" class="border mb-4 rounded-lg p-2 w-100" name="department" placeholder="Enter Department.." required/> <br>
+        <input type="file" class="border mb-4 rounded-lg p-2 w-100" name="image" /> <br>
         <button type="submit" class="btn-outline-primary btn">Add new data</button>
     </form>
 
@@ -32,6 +33,7 @@
                 <th>Course Type</th>
                 <th>Semester</th>
                 <th>Department</th>
+                <th>Image</th>
                 <th></th>
             </tr>
         </thead>
@@ -43,6 +45,14 @@
                     <td><%= item.courseType %></td>
                     <td><%= item.semester %></td>
                     <td><%= item.department %></td>
+                    <td>
+                        <img
+                            src="<%= item.image %>"
+                            alt="image"
+                            width="200"
+                            height="100"
+                        />
+                    </td>
                         <td>
                             <form action="/delete" method="POST" style="display: inline;">
                                 <input type="hidden" name="id" value="<%= item.id %>">

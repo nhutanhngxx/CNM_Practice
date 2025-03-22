@@ -1,30 +1,43 @@
 const awsHelper = require('./aws.helper');
+const { uploadFileToS3 } = require('./aws.helper');
 
 class Subject {
-    constructor(id, subjectName, courseType, semester, department) {
+    constructor(id, subjectName, courseType, semester, department, image) {
         this.id = id;  // id của subject, sẽ được chuyển thành chuỗi khi lưu vào DynamoDB
         this.subjectName = subjectName;
         this.courseType = courseType;
         this.semester = semester;
         this.department = department;
+        this.image = image;
     }
 
     // Phương thức tạo mới subject trong DynamoDB
     create() {
-        return new Promise((resolve, reject) => {
+        try {
+            // Bước 1: Tải file ảnh lên S3
+            if (this.image) {
+                const s3Data = await uploadFileToS3(this.image);  // Tải ảnh lên S3
+                this.image = s3Data.Location; // Cập nhật đường dẫn ảnh đã upload lên S3
+            }
+
+            // Bước 2: Dữ liệu subject cần tạo
             const subjectData = {
                 id: this.id.toString(),  // Chuyển id thành chuỗi nếu nó là số (Do DynamoDB đang lưu là String)
                 subjectName: this.subjectName,
                 courseType: this.courseType,
                 semester: this.semester,
-                department: this.department
+                department: this.department,
+                image: this.image // Đảm bảo đây là URL của ảnh đã upload lên S3
             };
 
-            awsHelper.createItem(subjectData)
-                .then(() => resolve('Subject created successfully'))
-                .catch((error) => reject('Error creating subject: ' + error));
-        });
+            // Bước 3: Lưu subject vào DynamoDB
+            await awsHelper.createItem(subjectData);
+            return 'Subject created successfully';
+        } catch (error) {
+            throw new Error('Error creating subject: ' + error.message);
+        }
     }
+
 
     // Phương thức tìm subject theo id
     getById(id) {
@@ -33,7 +46,7 @@ class Subject {
             awsHelper.getItem(key)
                 .then((subjectData) => {
                     if (subjectData) {
-                        resolve(new Subject(subjectData.id, subjectData.subjectName, subjectData.courseType, subjectData.semester, subjectData.department));
+                        resolve(new Subject(subjectData.id, subjectData.subjectName, subjectData.courseType, subjectData.semester, subjectData.department, subjectData.image));
                     } else {
                         resolve(null);  // Trả về null nếu không tìm thấy subject
                     }

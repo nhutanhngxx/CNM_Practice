@@ -1,5 +1,9 @@
 require("dotenv").config();
-const AWS = require('aws-sdk');
+const fs = require('fs');               // Để kiểm tra file
+const path = require('path');           // Để xử lý đường dẫn file
+const mime = require('mime-types');     // Để lấy MIME type của file
+const AWS = require('aws-sdk');         // Để làm việc với S3
+const s3 = new AWS.S3();
 
 AWS.config.update({
     region: process.env.REGION,
@@ -10,7 +14,39 @@ AWS.config.update({
 const docClient = new AWS.DynamoDB.DocumentClient();
 const tableName = 'Subject';
 
-// Các hàm trợ giúp cho các hoạt động DynamoDB
+
+const uploadFileToS3 = async (filePath) => {
+    console.log("Checking if file exists:", filePath);
+    if (!fs.existsSync(filePath)) {
+        throw new Error(`File not found: ${filePath}`);
+    }
+    console.log("Reading file...");
+    const fileContent = fs.readFileSync(filePath);
+    const fileName = `course-images/${Date.now()}-${path.basename(filePath)}`;
+    const mimeType = mime.lookup(filePath);
+    
+    if (!mimeType) {
+        throw new Error('Unsupported file type');
+    }
+
+    console.log(`Uploading ${fileName} with type ${mimeType}...`);
+    
+    const uploadParams = {
+        Bucket: process.env.BUCKET_NAME,
+        Key: fileName,
+        Body: fileContent,
+        ContentType: mimeType,
+    };
+
+    try {
+        const data = await s3.upload(uploadParams).promise();
+        console.log('File uploaded successfully:', data.Location);
+        return data;
+    } catch (err) {
+        console.error('Error uploading file:', err);
+        throw new Error(`Error uploading to S3: ${err.message}`);
+    }
+};
 
 async function createItem(item) {
     const params = {
@@ -114,5 +150,6 @@ module.exports = {
     updateItem,
     deleteItem,
     scanTable,
-    queryTable
+    queryTable,
+    uploadFileToS3
 };

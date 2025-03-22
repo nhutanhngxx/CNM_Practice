@@ -7,8 +7,8 @@ const s3 = new AWS.S3();
 
 AWS.config.update({
     region: process.env.REGION,
-    accessKeyId: process.env.ACCESSKEY,
-    secretAccessKey: process.env.SECRETKEY,
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
 });
 
 const docClient = new AWS.DynamoDB.DocumentClient();
@@ -17,36 +17,37 @@ const tableName = 'Subject';
 
 const uploadFileToS3 = async (filePath) => {
     console.log("Checking if file exists:", filePath);
-    if (!fs.existsSync(filePath)) {
-        throw new Error(`File not found: ${filePath}`);
+    
+    try {
+        fs.accessSync(filePath, fs.constants.R_OK);
+    } catch (err) {
+        throw new Error(`File không tồn tại hoặc không thể đọc: ${filePath}`);
     }
+
     console.log("Reading file...");
     const fileContent = fs.readFileSync(filePath);
-    const fileName = `course-images/${Date.now()}-${path.basename(filePath)}`;
-    const mimeType = mime.lookup(filePath);
-    
-    if (!mimeType) {
-        throw new Error('Unsupported file type');
-    }
+    const fileName = `${Date.now()}-${path.basename(filePath)}`;  // Bỏ course-images/
+    const mimeType = mime.lookup(filePath) || 'application/octet-stream';
 
     console.log(`Uploading ${fileName} with type ${mimeType}...`);
     
     const uploadParams = {
         Bucket: process.env.BUCKET_NAME,
-        Key: fileName,
+        Key: fileName,  // Chỉ dùng tên file, không có thư mục
         Body: fileContent,
         ContentType: mimeType,
     };
 
     try {
         const data = await s3.upload(uploadParams).promise();
-        console.log('File uploaded successfully:', data.Location);
+        console.log('✅ File uploaded successfully:', data.Location);
         return data;
     } catch (err) {
-        console.error('Error uploading file:', err);
+        console.error('❌ Error uploading file:', err);
         throw new Error(`Error uploading to S3: ${err.message}`);
     }
 };
+
 
 async function createItem(item) {
     const params = {
@@ -112,7 +113,7 @@ async function deleteItem(idToDelete, subjectName) {
     };
 
     try {
-        await dynamoDb.delete(params).promise();
+        await docClient.delete(params).promise();
         console.log("Item deleted successfully:", JSON.stringify(params.Key));
     } catch (err) {
         console.error("Error deleting item:", JSON.stringify(err, null, 2));

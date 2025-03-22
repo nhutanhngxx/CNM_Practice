@@ -12,27 +12,27 @@ class Subject {
     }
 
     // Phương thức tạo mới subject trong DynamoDB
-    create() {
+    async create() {
         try {
-            // Bước 1: Tải file ảnh lên S3
+            // Bước 1: Kiểm tra xem có file ảnh cần upload không
             if (this.image) {
                 const s3Data = await uploadFileToS3(this.image);  // Tải ảnh lên S3
-                this.image = s3Data.Location; // Cập nhật đường dẫn ảnh đã upload lên S3
+                this.image = s3Data.Location;  // Cập nhật URL ảnh từ S3
             }
-
+    
             // Bước 2: Dữ liệu subject cần tạo
             const subjectData = {
-                id: this.id.toString(),  // Chuyển id thành chuỗi nếu nó là số (Do DynamoDB đang lưu là String)
+                id: this.id.toString(),  // Chuyển id thành chuỗi nếu là số
                 subjectName: this.subjectName,
                 courseType: this.courseType,
                 semester: this.semester,
                 department: this.department,
-                image: this.image // Đảm bảo đây là URL của ảnh đã upload lên S3
+                image: this.image  // Lưu URL của ảnh vào DynamoDB
             };
-
+    
             // Bước 3: Lưu subject vào DynamoDB
             await awsHelper.createItem(subjectData);
-            return 'Subject created successfully';
+            return { message: 'Subject created successfully', imageUrl: this.image };
         } catch (error) {
             throw new Error('Error creating subject: ' + error.message);
         }
